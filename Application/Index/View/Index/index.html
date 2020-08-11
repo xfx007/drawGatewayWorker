@@ -1,0 +1,239 @@
+<!DOCTYPE HTML> 
+<html> 
+<head> 
+    <meta charset="utf-8"> 
+    <title>双人在线画画-小飞侠博客</title> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <script type="text/javascript" src="http://cdn.bootcss.com/jquery/3.1.1/jquery.min.js"/></script> 
+</head> 
+<style type="text/css">
+        body{
+            margin: 0;
+        }
+        #canvas{
+            background: rgb(255, 204, 188);
+        }
+</style>
+<body onload="connect();">
+    <p class="set">
+        <label for="fillColor">填充颜色</label>
+        <input type="color" id="fillColor">
+        <label for="strokeColor">描边颜色</label>
+        <input type="color" id="strokeColor">
+        <select id="shape">
+            <option value="arc">圆形</option>
+            <option value="ric">方形</option>
+        <option value="tri">三角形</option>
+        </select>
+        <label for="radius">半径：</label>
+        <input type="number" id="radius" value="10">
+        <select id="type" value="fill">
+            <option value="fill">填充</option>
+            <option value="stroke">描边</option>
+        </select>
+        <input type="button" value="清空" id="clear">
+    </p>
+    <canvas id="canvas"></canvas>
+</body> 
+</html>
+
+<script> 
+    //获取url中的参数
+    function getUrlParam(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)"); //构造一个含有目标参数的正则表达式对象
+        var r = window.location.search.substr(1).match(reg);  //匹配目标参数
+        if (r != null) return unescape(r[2]); return null; //返回参数值
+    }
+    let canvas = document.getElementById('canvas');
+    let context = canvas.getContext('2d');
+    let height = $(window).height();
+    let width = $(window).width();
+    canvas.width = width;//创建画布大小
+    // canvas.height = height;  //创建画布大小
+    canvas.height = 500;//创建画布大小
+    //发送信息
+    function send(caseStr=0 ,x=0, y=0, radius=0, type=0,fillColor,strokeColor) { 
+        var to_uid = getUrlParam('to_uid'); 
+       console.log(fillColor)
+       console.log(strokeColor)
+       console.log(radius)
+        $.post("/Index/index/message.html", {to_uid: to_uid,caseStr:caseStr,x:x, y:y, radius:radius, type:type,fillColor:fillColor,strokeColor:strokeColor}, function (data) {}); 
+    };
+    //头部功能方法
+    //填充颜色
+ //     $(document).ready(function(){
+ //       $("select").change(function(){
+ //           var selected=$(this).children('option:selected')
+ // 　      　console.log(selected.text());//打印输入框字符长度
+ //       });
+ //    }); 
+    function alterFillColor(radiusStr,fillColorStr,strokeColorStr){
+        $('#radius').val(radiusStr)
+        $('#fillColor').val("#"+fillColorStr);
+        $('#strokeColorStr').val("#"+strokeColorStr);
+    }
+    $("input").bind("input propertychange",function(){
+       var fillColorStr =   $('#fillColor').val()
+       var strokeColorStr =   $('#strokeColor').val()
+       var radiusStr =   $('#radius').val()
+       fillColorStr = fillColorStr.replace("#","")
+       strokeColorStr = strokeColorStr.replace("#","")
+       send('input',0, 0, radiusStr, 0,fillColorStr,strokeColorStr) 
+ });
+
+    //画笔方法
+    //圆形
+    function drawByArc(x, y, radius, type) {
+        // console.log('x:'+x);
+        // console.log('y:'+y);
+        // console.log('radius:'+radius);
+        // console.log('type:'+type);
+        context.beginPath()
+        context.arc(x, y, radius, 0, 2 * Math.PI)
+        if (type == 'fill')
+            context.fill()
+        else
+            context.stroke()
+        context.closePath()
+    }
+    //正方形
+    function drawByRic(x, y, radius,type) {
+        radius *= 8
+        context.beginPath()
+        context.rect(x, y, radius, radius)
+        if (type == 'fill')
+            context.fill()
+        else
+            context.stroke()
+        context.closePath()
+    }
+    //正三角形
+    function drawByTriangle(x, y, radius,type) {
+        context.beginPath()
+        context.moveTo(x, y - radius)
+        context.lineTo(x + Math.sin(Math.PI / 3) * radius, y + Math.cos(Math.PI / 3) * radius)
+        context.lineTo(x - Math.sin(Math.PI / 3) * radius, y + Math.cos(Math.PI / 3) * radius)
+        context.lineTo(x, y - radius)
+        if (type == 'fill')
+            context.fill()
+        else
+            context.stroke()
+        context.closePath()
+    }
+
+
+//接着是监听事件移动手机，
+ canvas.ontouchmove=function(aaa){
+          // console.log(aaa)  //打印出touchevent
+        var left=aaa.touches[0].clientX-event.target.offsetLeft;     //因为clientX/clientY的在Touch event的touchs下面的0数组中，所以。。。
+        var top=aaa.touches[0].clientY-event.target.offsetTop;
+        let radius = $('#radius').val() // 设置画笔半径
+        let type = $('#type').val() // 设置画笔类型
+        let fillColor= $('#fillColor').val()// 获取填充颜色
+        context.fillStyle = fillColor // 设置填充颜色
+        let strokeColor= $('#strokeColor').val()// 获取描边颜色
+        context.strokeStyle =strokeColor// 设置描边颜色
+        let caseStr = document.getElementById('shape').value 
+        send(caseStr ,left, top, radius, type,fillColor,strokeColor) 
+        switch (document.getElementById('shape').value) {
+            case "arc":
+                drawByArc(left, top, radius, type);
+                break
+            case "ric":
+                drawByRic(left, top, radius, type);
+                break;
+            case "tri":
+                drawByTriangle(left, top, radius, type);
+                break;
+        }
+    }
+//接着是监听事件PC电脑，
+    canvas.onmousedown = function() {
+        this.onmousemove = function(event) {
+            let left 
+            let top 
+            left = event.offsetX;
+            top = event.offsetY;
+            let radius = $('#radius').val() // 设置画笔半径
+            let type = $('#type').val() // 设置画笔类型
+            let fillColor= $('#fillColor').val()// 获取填充颜色
+            context.fillStyle = fillColor // 设置填充颜色
+            let strokeColor= $('#strokeColor').val()// 获取描边颜色
+            context.strokeStyle =strokeColor// 设置描边颜色
+            let caseStr = document.getElementById('shape').value
+            send(caseStr ,left, top, radius, type,fillColor,strokeColor) //给对方发送信息
+            switch (document.getElementById('shape').value) {
+                case "arc":
+                    drawByArc(left, top, radius, type);
+                    break
+                case "ric":
+                    drawByRic(left, top, radius, type);
+                    break;
+                case "tri":
+                    drawByTriangle(left, top, radius, type);
+                    break;
+            }
+        }
+ 
+        this.onmouseup = function() {
+            this.onmousemove = null
+        }
+    }
+    //清理画布
+    function clearRectasd(){
+        context.clearRect(0, 0, $(window).width(), 500)
+    }
+    //点击触发清理自己和对方的画布
+    document.getElementById('clear').onclick = () => {
+        clearRectasd()
+        send('clearRect')
+    }
+
+    var ws
+    function connect() {
+       // 创建websocket
+       ws = new WebSocket("ws://"+document.domain+":8282");//记得开端口号
+        ws.onopen = function () { 
+        }; 
+        ws.onmessage = function (evt) {
+            var received_msg = evt.data; 
+            // alert("数据已接收..." + received_msg); 
+            var jmsg = JSON.parse(received_msg);
+            if (jmsg.from_uid > 0) {
+                    switch (jmsg.caseStr) {
+                        case "arc":
+                            drawByArc(jmsg.x, jmsg.y, jmsg.radius, jmsg.type);
+                            break
+                        case "ric":
+                            drawByRic(jmsg.x, jmsg.y, jmsg.radius, jmsg.type);
+                            break;
+                        case "tri":
+                            drawByTriangle(jmsg.x, jmsg.y, jmsg.radius, jmsg.type);
+                            break;
+                        case "clearRect":
+                            clearRectasd();//清理页面
+                            break;
+                        case "input":
+                            alterFillColor(jmsg.radius,jmsg.fillColor,jmsg.strokeColor);
+                            break;
+                    } 
+            } 
+            //绑定uid
+            if (jmsg.client_id) { 
+                $.ajax({
+                type: "post",
+                url: "/Index/index/bind.html",
+                data:  {client_id: jmsg.client_id},
+                dataType: "json",
+                success: function (data) {
+                }
+                });
+            } 
+        } 
+       ws.onclose = function(e) {
+          connect();
+       };
+       ws.onerror = function(e) {
+       };
+    }
+</script> 
